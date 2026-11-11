@@ -44,15 +44,7 @@ export default function LoginScreen({ onLogin, isLoading, errorMessage }: LoginS
         />
       </motion.div>
         
-        <motion.h2 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="mt-6 text-center text-2xl font-extrabold text-slate-900 font-display"
-        >
-          Masuk ke Sistem
-        </motion.h2>
-        <p className="mt-1 text-center text-xs text-slate-500">
+        <p className="mt-3 text-center text-xs text-slate-500">
           Silakan masuk dengan username dan password Anda.
         </p>
       </div>
@@ -132,7 +124,7 @@ export default function LoginScreen({ onLogin, isLoading, errorMessage }: LoginS
       </div>
 
       <div className="mt-8 text-center text-xs text-slate-400 z-10">
-        SatuInApp &copy; {new Date().getFullYear()}
+        SatuInApp &copy; 2026 • Developed by Masna Novita Rahmaniar
       </div>
     </div>
   );

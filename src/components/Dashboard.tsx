@@ -92,18 +92,24 @@ export default function Dashboard({
     return allActivities.filter(act => act.date === todayStr);
   }, [allActivities, todayStr]);
 
-  // Define total list of distinct employees in our database (active employees)
+  // Define total list of distinct employees in our database (from registered users or existing activities)
   const activeEmployeesList = useMemo(() => {
     const list = new Set<string>();
+    
+    // Add names from submitted/existing activities
     allActivities.forEach(act => {
-      if (act.employeeName) list.add(act.employeeName);
+      if (act.employeeName && act.employeeName.trim()) list.add(act.employeeName.trim());
     });
-    // Fallback if empty
-    if (list.size === 0) {
-      return ['Masna Fitria', 'Finda Rosita', 'Nurul Hidayah', 'Azka Pratama'];
+
+    // Also include registered users from database (if any)
+    if (users && users.length > 0) {
+      users.forEach(u => {
+        if (u.name && u.name.trim()) list.add(u.name.trim());
+      });
     }
+
     return Array.from(list);
-  }, [allActivities]);
+  }, [allActivities, users]);
 
   // 2. WIDGET STATS CALCULATIONS
   const stats = useMemo(() => {
@@ -194,8 +200,10 @@ export default function Dashboard({
 
     const empList = Object.values(employeeGroup);
 
-    // All Employees Ranked by Activities Count (Scrollable)
-    const allActivitiesRanked = [...empList]
+    // Only include employees who actually have activities in current month for Peringkat Kegiatan
+    // If no activities at all, empList with activitiesCount > 0 will be empty, cleanly showing empty state
+    const allActivitiesRanked = empList
+      .filter(e => e.activitiesCount > 0)
       .sort((a, b) => b.activitiesCount - a.activitiesCount || a.name.localeCompare(b.name));
 
     // Helper to find performance plan for an activity
@@ -227,134 +235,139 @@ export default function Dashboard({
 
     // 4. HIERARCHICAL PERFORMANCE CONTRIBUTION PER EMPLOYEE
     // Formula: Kontribusi = (Realisasi RK Anggota / Target RK Anggota) × (Bobot RK Anggota / 100) × (Bobot RK Ketua / 100) * 100%
-    const employeeContributions: EmployeeContributionSummary[] = activeEmployeesList.map(empName => {
-      const empActs = allActivities.filter(a => a.employeeName === empName);
-      const teamName = empActs[0]?.team || 'Tim Kerja';
-      const email = empActs[0]?.email;
+    const employeeContributions: EmployeeContributionSummary[] = activeEmployeesList
+      .map(empName => {
+        const empActs = allActivities.filter(a => a.employeeName === empName);
+        const teamName = empActs[0]?.team || 'Tim Kerja';
+        const email = empActs[0]?.email;
 
-      // Group activities by same Rencana Kinerja Anggota (sum realisasi for the same RK per employee)
-      const rkGroup: Record<string, {
-        plan?: PerformancePlan;
-        rkKey: string;
-        totalRealisasi: number;
-        activitiesCount: number;
-      }> = {};
+        // Group activities by same Rencana Kinerja Anggota (sum realisasi for the same RK per employee)
+        const rkGroup: Record<string, {
+          plan?: PerformancePlan;
+          rkKey: string;
+          totalRealisasi: number;
+          activitiesCount: number;
+        }> = {};
 
-      empActs.forEach(act => {
-        const matchedPlan = findMatchingPlan(act);
-        const rkKey = matchedPlan?.id || act.rencana_kinerja || act.performancePlanTitle || act.subActivity || 'Kegiatan Umum';
-        
-        if (!rkGroup[rkKey]) {
-          rkGroup[rkKey] = {
-            plan: matchedPlan,
-            rkKey,
-            totalRealisasi: 0,
-            activitiesCount: 0
+        empActs.forEach(act => {
+          const matchedPlan = findMatchingPlan(act);
+          const rkKey = matchedPlan?.id || act.rencana_kinerja || act.performancePlanTitle || act.subActivity || 'Kegiatan Umum';
+          
+          if (!rkGroup[rkKey]) {
+            rkGroup[rkKey] = {
+              plan: matchedPlan,
+              rkKey,
+              totalRealisasi: 0,
+              activitiesCount: 0
+            };
+          }
+          rkGroup[rkKey].totalRealisasi += (Number(act.realisasi) || 0);
+          rkGroup[rkKey].activitiesCount += 1;
+        });
+
+        // Calculate contribution for each RK Anggota
+        const items: EmployeeContributionItem[] = Object.values(rkGroup).map(grp => {
+          const plan = grp.plan;
+          const targetOutput = plan ? Number(plan.targetOutput) || 1 : 1;
+          const unit = plan?.unit || 'Dokumen';
+          const bobotKetuaRaw = plan ? Number(plan.bobotRkKetua) || 50 : 50;
+          const bobotAnggotaRaw = plan ? Number(plan.bobotRkAnggota ?? plan.weight) || 20 : 20;
+
+          const bobotKetuaDec = bobotKetuaRaw > 1 ? bobotKetuaRaw / 100 : bobotKetuaRaw;
+          const bobotAnggotaDec = bobotAnggotaRaw > 1 ? bobotAnggotaRaw / 100 : bobotAnggotaRaw;
+
+          // Persentase Realisasi Anggota = Realisasi Anggota / Target Anggota * 100%
+          const persentaseRealisasi = targetOutput > 0 
+            ? (grp.totalRealisasi / targetOutput) * 100 
+            : 0;
+
+          // Kontribusi Anggota terhadap IKU = Persentase Realisasi * Bobot RK Anggota * Bobot RK Ketua
+          const kontribusiIku = persentaseRealisasi * bobotAnggotaDec * bobotKetuaDec;
+
+          return {
+            planId: plan?.id,
+            iku: plan?.iku || 'IKU Tim Kerja',
+            targetIku: plan?.targetIku || '100%',
+            rencanaKinerjaKetua: plan?.rencanaKinerjaKetua || 'Rencana Kinerja Ketua',
+            bobotRkKetua: bobotKetuaRaw,
+            rencanaKinerjaAnggota: plan?.rencanaKinerjaAnggota || plan?.indicator || grp.rkKey,
+            bobotRkAnggota: bobotAnggotaRaw,
+            targetOutput,
+            unit,
+            totalRealisasi: grp.totalRealisasi,
+            persentaseRealisasi: Math.round(persentaseRealisasi * 10) / 10,
+            kontribusiIku: Math.round(kontribusiIku * 100) / 100,
+            activitiesCount: grp.activitiesCount
           };
-        }
-        rkGroup[rkKey].totalRealisasi += (Number(act.realisasi) || 0);
-        rkGroup[rkKey].activitiesCount += 1;
-      });
+        });
 
-      // Calculate contribution for each RK Anggota
-      const items: EmployeeContributionItem[] = Object.values(rkGroup).map(grp => {
-        const plan = grp.plan;
-        const targetOutput = plan ? Number(plan.targetOutput) || 1 : 1;
-        const unit = plan?.unit || 'Dokumen';
-        const bobotKetuaRaw = plan ? Number(plan.bobotRkKetua) || 50 : 50;
-        const bobotAnggotaRaw = plan ? Number(plan.bobotRkAnggota ?? plan.weight) || 20 : 20;
-
-        const bobotKetuaDec = bobotKetuaRaw > 1 ? bobotKetuaRaw / 100 : bobotKetuaRaw;
-        const bobotAnggotaDec = bobotAnggotaRaw > 1 ? bobotAnggotaRaw / 100 : bobotAnggotaRaw;
-
-        // Persentase Realisasi Anggota = Realisasi Anggota / Target Anggota * 100%
-        const persentaseRealisasi = targetOutput > 0 
-          ? (grp.totalRealisasi / targetOutput) * 100 
-          : 0;
-
-        // Kontribusi Anggota terhadap IKU = Persentase Realisasi * Bobot RK Anggota * Bobot RK Ketua
-        const kontribusiIku = persentaseRealisasi * bobotAnggotaDec * bobotKetuaDec;
+        const totalKontribusiIku = items.reduce((sum, item) => sum + item.kontribusiIku, 0);
+        const totalRealisasiAll = items.reduce((sum, item) => sum + item.totalRealisasi, 0);
 
         return {
-          planId: plan?.id,
-          iku: plan?.iku || 'IKU Tim Kerja',
-          targetIku: plan?.targetIku || '100%',
-          rencanaKinerjaKetua: plan?.rencanaKinerjaKetua || 'Rencana Kinerja Ketua',
-          bobotRkKetua: bobotKetuaRaw,
-          rencanaKinerjaAnggota: plan?.rencanaKinerjaAnggota || plan?.indicator || grp.rkKey,
-          bobotRkAnggota: bobotAnggotaRaw,
-          targetOutput,
-          unit,
-          totalRealisasi: grp.totalRealisasi,
-          persentaseRealisasi: Math.round(persentaseRealisasi * 10) / 10,
-          kontribusiIku: Math.round(kontribusiIku * 100) / 100,
-          activitiesCount: grp.activitiesCount
+          name: empName,
+          email,
+          team: teamName,
+          totalKontribusiIku: Math.round(totalKontribusiIku * 100) / 100,
+          totalRealisasiAll,
+          totalActivitiesCount: empActs.length,
+          items
         };
+      })
+      .filter(e => e.totalActivitiesCount > 0 || e.totalKontribusiIku > 0)
+      .sort((a, b) => {
+        if (b.totalKontribusiIku !== a.totalKontribusiIku) {
+          return b.totalKontribusiIku - a.totalKontribusiIku;
+        }
+        return b.totalRealisasiAll - a.totalRealisasiAll;
       });
-
-      const totalKontribusiIku = items.reduce((sum, item) => sum + item.kontribusiIku, 0);
-      const totalRealisasiAll = items.reduce((sum, item) => sum + item.totalRealisasi, 0);
-
-      return {
-        name: empName,
-        email,
-        team: teamName,
-        totalKontribusiIku: Math.round(totalKontribusiIku * 100) / 100,
-        totalRealisasiAll,
-        totalActivitiesCount: empActs.length,
-        items
-      };
-    }).sort((a, b) => {
-      if (b.totalKontribusiIku !== a.totalKontribusiIku) {
-        return b.totalKontribusiIku - a.totalKontribusiIku;
-      }
-      return b.totalRealisasiAll - a.totalRealisasiAll;
-    });
 
     // Helper to resolve Ketua Tim Name
     const getTeamLeaderName = (teamName: string): string => {
       const foundInProps = teams.find(t => t.name.toLowerCase().trim() === teamName.toLowerCase().trim());
       if (foundInProps && foundInProps.leaderName) return foundInProps.leaderName;
 
-      const foundInDefault = DEFAULT_TEAMS.find(t => t.name.toLowerCase().trim() === teamName.toLowerCase().trim());
-      if (foundInDefault && foundInDefault.leaderName) return foundInDefault.leaderName;
-
-      return `Ketua ${teamName}`;
+      return '';
     };
 
     // 5. KETUA TIM / TIM KERJA CONTRIBUTION AGGREGATION
-    const allTeamNamesSet = new Set<string>();
+    // Only aggregate teams that actually exist in teams or have member contributions
+    const activeTeamNamesSet = new Set<string>();
     if (teams && teams.length > 0) {
-      teams.forEach(t => allTeamNamesSet.add(t.name));
+      teams.forEach(t => {
+        if (t.leaderName && t.leaderName.trim()) activeTeamNamesSet.add(t.name);
+      });
     }
-    DEFAULT_TEAMS.forEach(t => allTeamNamesSet.add(t.name));
     employeeContributions.forEach(e => {
-      if (e.team) allTeamNamesSet.add(e.team);
+      if (e.team && e.totalKontribusiIku > 0) activeTeamNamesSet.add(e.team);
     });
 
-    const ketuaContributions: KetuaContributionSummary[] = Array.from(allTeamNamesSet).map(teamName => {
-      const leaderName = getTeamLeaderName(teamName);
-      const members = employeeContributions.filter(e => e.team === teamName);
-      
-      const totalKontribusiIku = members.reduce((sum, m) => sum + m.totalKontribusiIku, 0);
-      const totalRealisasiAll = members.reduce((sum, m) => sum + m.totalRealisasiAll, 0);
-      const totalActivitiesCount = members.reduce((sum, m) => sum + m.totalActivitiesCount, 0);
+    const ketuaContributions: KetuaContributionSummary[] = Array.from(activeTeamNamesSet)
+      .map(teamName => {
+        const leaderName = getTeamLeaderName(teamName) || `Ketua ${teamName}`;
+        const members = employeeContributions.filter(e => e.team === teamName);
+        
+        const totalKontribusiIku = members.reduce((sum, m) => sum + m.totalKontribusiIku, 0);
+        const totalRealisasiAll = members.reduce((sum, m) => sum + m.totalRealisasiAll, 0);
+        const totalActivitiesCount = members.reduce((sum, m) => sum + m.totalActivitiesCount, 0);
 
-      return {
-        teamName,
-        leaderName,
-        totalKontribusiIku: Math.round(totalKontribusiIku * 100) / 100,
-        totalRealisasiAll,
-        totalActivitiesCount,
-        memberCount: members.length,
-        memberContributions: members
-      };
-    }).sort((a, b) => {
-      if (b.totalKontribusiIku !== a.totalKontribusiIku) {
-        return b.totalKontribusiIku - a.totalKontribusiIku;
-      }
-      return b.totalRealisasiAll - a.totalRealisasiAll;
-    });
+        return {
+          teamName,
+          leaderName,
+          totalKontribusiIku: Math.round(totalKontribusiIku * 100) / 100,
+          totalRealisasiAll,
+          totalActivitiesCount,
+          memberCount: members.length,
+          memberContributions: members
+        };
+      })
+      .filter(k => k.totalActivitiesCount > 0 || k.totalKontribusiIku > 0)
+      .sort((a, b) => {
+        if (b.totalKontribusiIku !== a.totalKontribusiIku) {
+          return b.totalKontribusiIku - a.totalKontribusiIku;
+        }
+        return b.totalRealisasiAll - a.totalRealisasiAll;
+      });
 
     const topContribution = employeeContributions.slice(0, 5);
 
@@ -509,7 +522,7 @@ export default function Dashboard({
       {/* HEADER SECTION WITH EXPORTS */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 font-display">Dashboard Statistik KIPAPP</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 font-display">Dashboard Statistik Kinerja Pegawai</h1>
           <p className="text-sm text-slate-500">Ikhtisar instan seluruh data aktivitas, rekap KIPAPP, dan grafik capaian pegawai.</p>
         </div>
 
@@ -666,7 +679,7 @@ export default function Dashboard({
           )}
         </div>
 
-        {/* Top Kontribusi IKU (Seksi Pilihan Anggota vs Ketua Tim) */}
+        {/* Top Kontributor IKU (Seksi Pilihan Anggota vs Ketua Tim) */}
         <div className="bg-gradient-to-b from-indigo-50/40 via-white to-white p-5 rounded-3xl border border-indigo-200/90 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col max-h-[460px]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-indigo-100 pb-2.5 mb-3 flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -675,7 +688,7 @@ export default function Dashboard({
               </div>
               <div>
                 <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  Top Kontribusi IKU <span>🎯</span>
+                  Top Kontributor IKU <span>🎯</span>
                 </h3>
                 <span className="text-[10px] text-slate-400 font-medium">Berdasarkan Hierarki &amp; Bobot</span>
               </div>

@@ -222,7 +222,7 @@ export async function syncActivityRowToSpreadsheetTab(
 }
 
 /**
- * Syncs a single activity to BOTH tab 'Semua Kegiatan' AND the employee's personal tab (e.g. 'Masna Fitria')
+ * Syncs a single activity to BOTH tab 'Semua Kegiatan' AND the employee's personal tab (e.g. 'Masna Novita Rahmaniar')
  */
 export async function syncActivityToGoogleSheets(
   token: string,
@@ -240,7 +240,7 @@ export async function syncActivityToGoogleSheets(
       activity
     );
 
-    // 2. Sync to Employee Tab: e.g. 'Masna Fitria'
+    // 2. Sync to Employee Tab: e.g. 'Masna Novita Rahmaniar'
     const empTabTitle = activity.employeeName?.trim() || 'Pegawai';
     const employeeSynced = await syncActivityRowToSpreadsheetTab(
       token,
@@ -360,7 +360,7 @@ export async function initializeAllEmployeeTabs(
 }
 
 /**
- * Syncs a user account to Google Spreadsheet tab 'Master Pengguna' AND creates their personal tab (e.g. 'Masna Fitria')
+ * Syncs a user account to Google Spreadsheet tab 'Master Pengguna' AND creates their personal tab (e.g. 'Masna Novita Rahmaniar')
  */
 export async function syncUserToGoogleSheets(
   token: string,
@@ -373,7 +373,7 @@ export async function syncUserToGoogleSheets(
     // 1. Ensure tab 'Master Pengguna' exists
     await ensureSheetTabExists(token, spreadsheetId, 'Master Pengguna', USER_HEADERS);
 
-    // 2. Ensure personal employee tab exists (e.g. 'Masna Fitria')
+    // 2. Ensure personal employee tab exists (e.g. 'Masna Novita Rahmaniar')
     if (user.name) {
       await ensureSheetTabExists(token, spreadsheetId, user.name.trim(), ACTIVITY_HEADERS);
     }

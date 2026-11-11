@@ -15,7 +15,7 @@ export async function verifyUserLogin(email: string, password: string, roleReque
     const data = await res.json();
     return data;
   } catch (error: any) {
-    return { success: false, message: 'Gagal terhubung ke Database Server OneInAPP.' };
+    return { success: false, message: 'Gagal terhubung ke Database Server SatuInApp.' };
   }
 }
 

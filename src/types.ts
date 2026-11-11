@@ -74,6 +74,7 @@ export interface Activity {
   driveFileId: string;
   status: 'Draft' | 'Submitted' | 'Deleted';
   notes?: string;
+  photoData?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,7 +126,7 @@ export interface DatabaseTableInfo {
 export const DEFAULT_TEAMS: Omit<Team, 'id' | 'createdAt'>[] = [
   { code: 'SOS', name: 'Tim Statistik Sosial', description: 'Survei kependudukan, kemiskinan, ketenagakerjaan, dan kesehatan', leaderName: 'Nurul Hidayah, S.Tr.Stat', leaderEmail: 'nurul.hidayah@bps.go.id' },
   { code: 'PROD', name: 'Tim Statistik Produksi', description: 'Statistik pertanian, perkebunan, peternakan, industri, pertambangan, dan energi', leaderName: 'Budi Santoso, S.Si', leaderEmail: 'budi.santoso@bps.go.id' },
-  { code: 'DIST', name: 'Tim Statistik Distribusi', description: 'Statistik harga konsumen, perdagangan besar, pariwisata, dan transportasi', leaderName: 'Masna Fitria, S.Stat', leaderEmail: 'rmasnanovita@gmail.com' },
+  { code: 'DIST', name: 'Tim Statistik Distribusi', description: 'Statistik harga konsumen, perdagangan besar, pariwisata, dan transportasi', leaderName: 'Masna Novita Rahmaniar', leaderEmail: 'rmasnanovita@gmail.com' },
   { code: 'NER', name: 'Tim Neraca Wilayah & Analisis', description: 'Penyusunan PDRB menurut lapangan usaha dan pengeluaran serta tabel I-O', leaderName: 'Finda Rosita, M.E', leaderEmail: 'finda.rosita@bps.go.id' },
   { code: 'IPDS', name: 'Tim IPDS & TI', description: 'Pengelolaan data, jaringan, website kantor, diseminasi, dan metadata statistik', leaderName: 'Azka Pratama, S.Kom', leaderEmail: 'azka.pratama@bps.go.id' },
   { code: 'UMUM', name: 'Bagian Tata Usaha & Umum', description: 'Kepegawaian, keuangan, perlengkapan, dan kearsipan kantor', leaderName: 'Hendra Gunawan, S.E', leaderEmail: 'hendra.gunawan@bps.go.id' }

@@ -466,7 +466,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     // Masna: Target 10 kegiatan. Total progress 820% (avg progress 82%) => Masna has 82%
     {
       id: 'demo-mas-1',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com', // Active user gets this to feel familiar!
       team: 'Tim Distribusi',
       date: d1,
@@ -481,7 +481,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-2',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d2,
@@ -496,7 +496,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-3',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d3,
@@ -511,7 +511,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-4',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d4,
@@ -526,7 +526,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-5',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d4,
@@ -541,7 +541,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-6',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d4,
@@ -556,7 +556,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-7',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d1,
@@ -571,7 +571,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-8',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d2,
@@ -586,7 +586,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-9',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d3,
@@ -601,7 +601,7 @@ async function seedDemoData(token: string, spreadsheetId: string, sheetTitle: st
     },
     {
       id: 'demo-mas-10',
-      employeeName: 'Masna Fitria',
+      employeeName: 'Masna Novita Rahmaniar',
       email: 'rmasnanovita@gmail.com',
       team: 'Tim Distribusi',
       date: d3,

@@ -64,7 +64,7 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     const fallbackUser = {
       uid: 'fallback-usr-1',
       email: 'rmasnanovita@gmail.com',
-      displayName: 'Masna Fitria, S.Stat',
+      displayName: 'Masna Novita Rahmaniar',
       photoURL: null
     } as unknown as User;
     

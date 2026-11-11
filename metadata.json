@@ -1,5 +1,5 @@
 {
-  "name": "OneInAPP",
+  "name": "SatuInApp",
   "description": "Portal Manajemen Kinerja & Monitoring Pegawai Terintegrasi Server Database dan Google Drive",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -1,13 +1,15 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { createServer as createViteServer } from 'vite';
+import multer from 'multer';
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // --- DATABASE PERSISTENCE SETUP ---
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -110,226 +112,40 @@ function getInitialDb(): DatabaseSchema {
   const users: DatabaseSchema['users'] = [
     {
       id: 'usr-1',
+      username: 'masnanovita',
       email: 'rmasnanovita@gmail.com',
-      name: 'Masna Fitria, S.Stat',
+      name: 'Masna Novita Rahmaniar',
       nip: '199408292018012001',
       team: 'Tim Statistik Distribusi',
       role: 'admin',
       status: 'active',
       password: 'admin123',
-      createdAt: now,
-      lastLogin: now
-    },
-    {
-      id: 'usr-1b',
-      email: 'skripsimasna@gmail.com',
-      name: 'Masna Fitria (Skripsi)',
-      nip: '199408292018012001',
-      team: 'Tim Statistik Distribusi',
-      role: 'admin',
-      status: 'active',
-      password: 'skripsi123',
-      createdAt: now,
-      lastLogin: now
-    },
-    {
-      id: 'usr-2',
-      email: 'admin@bps.go.id',
-      name: 'Administrator Kantor BPS',
-      nip: '198501012007011001',
-      team: 'Bagian Tata Usaha & Umum',
-      role: 'admin',
-      status: 'active',
-      password: 'admin123',
-      createdAt: now,
-      lastLogin: now
-    },
-    {
-      id: 'usr-3',
-      email: 'nurul.hidayah@example.com',
-      name: 'Nurul Hidayah, S.Tr.Stat',
-      nip: '199203152015022002',
-      team: 'Tim Statistik Sosial',
-      role: 'pegawai',
-      status: 'active',
-      password: 'pegawai123',
-      createdAt: now,
-      lastLogin: now
-    },
-    {
-      id: 'usr-4',
-      email: 'finda.rosita@example.com',
-      name: 'Finda Rosita, M.E',
-      nip: '199511102019012003',
-      team: 'Tim Neraca Wilayah & Analisis',
-      role: 'pegawai',
-      status: 'active',
-      password: 'pegawai123',
-      createdAt: now,
-      lastLogin: now
-    },
-    {
-      id: 'usr-5',
-      email: 'azka.pratama@example.com',
-      name: 'Azka Pratama, S.Kom',
-      nip: '199607222020021004',
-      team: 'Tim IPDS & TI',
-      role: 'pegawai',
-      status: 'active',
-      password: 'pegawai123',
       createdAt: now,
       lastLogin: now
     }
   ];
 
   const teams: DatabaseSchema['teams'] = [
-    { id: 'team-1', code: 'SOS', name: 'Tim Statistik Sosial', description: 'Survei kependudukan, kemiskinan, ketenagakerjaan, dan kesehatan', leaderName: 'Nurul Hidayah, S.Tr.Stat', leaderEmail: 'nurul.hidayah@example.com', createdAt: now },
-    { id: 'team-2', code: 'PROD', name: 'Tim Statistik Produksi', description: 'Statistik pertanian, perkebunan, industri, pertambangan, dan energi', leaderName: 'Budi Santoso, S.Si', leaderEmail: 'budi.santoso@bps.go.id', createdAt: now },
-    { id: 'team-3', code: 'DIST', name: 'Tim Statistik Distribusi', description: 'Statistik harga konsumen, perdagangan besar, pariwisata, dan transportasi', leaderName: 'Masna Fitria, S.Stat', leaderEmail: 'rmasnanovita@gmail.com', createdAt: now },
-    { id: 'team-4', code: 'NER', name: 'Tim Neraca Wilayah & Analisis', description: 'Penyusunan PDRB menurut lapangan usaha dan pengeluaran serta tabel I-O', leaderName: 'Finda Rosita, M.E', leaderEmail: 'finda.rosita@example.com', createdAt: now },
-    { id: 'team-5', code: 'IPDS', name: 'Tim IPDS & TI', description: 'Pengelolaan data, jaringan, website kantor, diseminasi, dan metadata', leaderName: 'Azka Pratama, S.Kom', leaderEmail: 'azka.pratama@example.com', createdAt: now },
-    { id: 'team-6', code: 'UMUM', name: 'Bagian Tata Usaha & Umum', description: 'Kepegawaian, keuangan, perlengkapan, dan kearsipan kantor', leaderName: 'Hendra Gunawan, S.E', leaderEmail: 'hendra.gunawan@bps.go.id', createdAt: now }
+    { id: 'team-1', code: 'SOS', name: 'Tim Statistik Sosial', description: 'Survei kependudukan, kemiskinan, ketenagakerjaan, dan kesehatan', leaderName: '', leaderEmail: '', createdAt: now },
+    { id: 'team-2', code: 'PROD', name: 'Tim Statistik Produksi', description: 'Statistik pertanian, perkebunan, industri, pertambangan, dan energi', leaderName: '', leaderEmail: '', createdAt: now },
+    { id: 'team-3', code: 'DIST', name: 'Tim Statistik Distribusi', description: 'Statistik harga konsumen, perdagangan besar, pariwisata, dan transportasi', leaderName: '', leaderEmail: '', createdAt: now },
+    { id: 'team-4', code: 'NER', name: 'Tim Neraca Wilayah & Analisis', description: 'Penyusunan PDRB menurut lapangan usaha dan pengeluaran serta tabel I-O', leaderName: '', leaderEmail: '', createdAt: now },
+    { id: 'team-5', code: 'IPDS', name: 'Tim IPDS & TI', description: 'Pengelolaan data, jaringan, website kantor, diseminasi, dan metadata', leaderName: '', leaderEmail: '', createdAt: now },
+    { id: 'team-6', code: 'UMUM', name: 'Bagian Tata Usaha & Umum', description: 'Kepegawaian, keuangan, perlengkapan, dan kearsipan kantor', leaderName: '', leaderEmail: '', createdAt: now }
   ];
 
-  const performance_plans: DatabaseSchema['performance_plans'] = [
-    // 2026 Plans
-    { id: 'plan-2026-1', year: 2026, team: 'Tim Statistik Sosial', iku: 'IKU 1: Persentase Kualitas Data Sosial', targetIku: '100%', rencanaKinerjaKetua: 'Koordinasi Survei Sosial', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Terlaksananya Survei Angkatan Kerja Nasional (Sakernas)', indicator: 'Terlaksananya Survei Angkatan Kerja Nasional (Sakernas)', targetOutput: 120, unit: 'Dokumen', weight: 25, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-2', year: 2026, team: 'Tim Statistik Sosial', iku: 'IKU 1: Persentase Kualitas Data Sosial', targetIku: '100%', rencanaKinerjaKetua: 'Koordinasi Pendataan Susenas', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Pendataan Survei Sosial Ekonomi Nasional (Susenas)', indicator: 'Pendataan Survei Sosial Ekonomi Nasional (Susenas)', targetOutput: 250, unit: 'Sampel / Responden', weight: 35, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-3', year: 2026, team: 'Tim Statistik Distribusi', iku: 'IKU 2: Indeks Harga dan Distribusi', targetIku: '100%', rencanaKinerjaKetua: 'Pengawasan Survei Harga IHK', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Survei Pemantauan Indeks Harga Konsumen (IHK) Mingguan', indicator: 'Survei Pemantauan Indeks Harga Konsumen (IHK) Mingguan', targetOutput: 52, unit: 'Laporan', weight: 30, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-4', year: 2026, team: 'Tim Statistik Distribusi', iku: 'IKU 2: Indeks Harga dan Distribusi', targetIku: '100%', rencanaKinerjaKetua: 'Analisis Pariwisata', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Survei Tingkat Penghunian Kamar Hotel dan Wisatawan', indicator: 'Survei Tingkat Penghunian Kamar Hotel dan Wisatawan', targetOutput: 12, unit: 'Publikasi', weight: 20, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-5', year: 2026, team: 'Tim Neraca Wilayah & Analisis', iku: 'IKU 3: PDRB dan Analisis Makro', targetIku: '100%', rencanaKinerjaKetua: 'Penyusunan PDRB', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Penyusunan Publikasi PDRB Triwulanan dan Tahunan', indicator: 'Penyusunan Publikasi PDRB Triwulanan dan Tahunan', targetOutput: 4, unit: 'Publikasi', weight: 40, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-6', year: 2026, team: 'Tim IPDS & TI', iku: 'IKU 4: Pengelolaan TI & Diseminasi', targetIku: '100%', rencanaKinerjaKetua: 'Diseminasi Statistik', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Diseminasi Rilis Berita Resmi Statistik (BRS) & Portal Data', indicator: 'Diseminasi Rilis Berita Resmi Statistik (BRS) & Portal Data', targetOutput: 24, unit: 'Tabel Statistik', weight: 25, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2026-7', year: 2026, team: 'Bagian Tata Usaha & Umum', iku: 'IKU 5: Akuntabilitas Kinerja', targetIku: '100%', rencanaKinerjaKetua: 'Penyusunan LAKIP', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Penyusunan Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP)', indicator: 'Penyusunan Laporan Akuntabilitas Kinerja Instansi Pemerintah (LAKIP)', targetOutput: 1, unit: 'Laporan', weight: 20, realisasi: 0, status: 'active', createdAt: now },
-    // 2025 Plans
-    { id: 'plan-2025-1', year: 2025, team: 'Tim Statistik Sosial', iku: 'IKU 1', targetIku: '100%', rencanaKinerjaKetua: 'Kesejahteraan Rakyat', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Penyusunan Publikasi Indikator Kesejahteraan Rakyat', indicator: 'Penyusunan Publikasi Indikator Kesejahteraan Rakyat', targetOutput: 1, unit: 'Publikasi', weight: 30, realisasi: 0, status: 'active', createdAt: now },
-    { id: 'plan-2025-2', year: 2025, team: 'Tim Statistik Distribusi', iku: 'IKU 2', targetIku: '100%', rencanaKinerjaKetua: 'Perdagangan', bobotRkKetua: 50, rencanaKinerjaAnggota: 'Pencacahan Survei Perdagangan Antar Wilayah', indicator: 'Pencacahan Survei Perdagangan Antar Wilayah', targetOutput: 80, unit: 'Sampel / Responden', weight: 30, realisasi: 0, status: 'active', createdAt: now }
-  ];
+  const performance_plans: DatabaseSchema['performance_plans'] = [];
 
-  const activities: DatabaseSchema['activities'] = [
-    {
-      id: 'act-mas-1',
-      employeeName: 'Masna Fitria, S.Stat',
-      email: 'rmasnanovita@gmail.com',
-      team: 'Tim Statistik Distribusi',
-      date: `${currentYear}-08-05`,
-      year: currentYear,
-      activityType: 'Survei / Pencacahan Lapangan',
-      subActivity: 'Survei Harga Konsumen Komoditas Pangan Pasar Tradisional',
-      performancePlanId: 'plan-2026-3',
-      performancePlanTitle: 'Survei Pemantauan Indeks Harga Konsumen (IHK) Mingguan',
-      progress: 100,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-mas-01',
-      status: 'Submitted',
-      notes: 'Pendataan 15 komoditas pokok selesai di Pasar Sentral',
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: 'act-mas-2',
-      employeeName: 'Masna Fitria, S.Stat',
-      email: 'rmasnanovita@gmail.com',
-      team: 'Tim Statistik Distribusi',
-      date: `${currentYear}-08-12`,
-      year: currentYear,
-      activityType: 'Pengolahan & Validasi Data',
-      subActivity: 'Entri Data dan Validasi Angka Indeks Harga Perdagangan Besar',
-      performancePlanId: 'plan-2026-3',
-      performancePlanTitle: 'Survei Pemantauan Indeks Harga Konsumen (IHK) Mingguan',
-      progress: 90,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-mas-02',
-      status: 'Submitted',
-      notes: 'Validasi anomali harga cabai dan beras telah terkonfirmasi',
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: 'act-mas-3',
-      employeeName: 'Masna Fitria, S.Stat',
-      email: 'rmasnanovita@gmail.com',
-      team: 'Tim Statistik Distribusi',
-      date: `${currentYear}-08-20`,
-      year: currentYear,
-      activityType: 'Analisis & Diseminasi Statistik',
-      subActivity: 'Penyusunan Bahan Rilis Inflasi Kota Bulanan',
-      performancePlanId: 'plan-2026-4',
-      performancePlanTitle: 'Survei Tingkat Penghunian Kamar Hotel dan Wisatawan',
-      progress: 100,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-mas-03',
-      status: 'Submitted',
-      notes: 'Tabel inflasi m-to-m dan y-on-y siap dipublikasikan',
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: 'act-nur-1',
-      employeeName: 'Nurul Hidayah, S.Tr.Stat',
-      email: 'nurul.hidayah@example.com',
-      team: 'Tim Statistik Sosial',
-      date: `${currentYear}-08-08`,
-      year: currentYear,
-      activityType: 'Survei / Pencacahan Lapangan',
-      subActivity: 'Pelaksanaan Listing Survei Sakernas Semester II',
-      performancePlanId: 'plan-2026-1',
-      performancePlanTitle: 'Terlaksananya Survei Angkatan Kerja Nasional (Sakernas)',
-      progress: 100,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-nur-01',
-      status: 'Submitted',
-      notes: 'Listing 10 Blok Sensus telah 100% selesai',
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: 'act-fin-1',
-      employeeName: 'Finda Rosita, M.E',
-      email: 'finda.rosita@example.com',
-      team: 'Tim Neraca Wilayah & Analisis',
-      date: `${currentYear}-08-15`,
-      year: currentYear,
-      activityType: 'Analisis & Diseminasi Statistik',
-      subActivity: 'Penyusunan Laju Pertumbuhan Ekonomi PDRB Triwulan II',
-      performancePlanId: 'plan-2026-5',
-      performancePlanTitle: 'Penyusunan Publikasi PDRB Triwulanan dan Tahunan',
-      progress: 75,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-fin-01',
-      status: 'Submitted',
-      notes: 'Tahap kompilasi data sekunder sektor perdagangan',
-      createdAt: now,
-      updatedAt: now
-    },
-    {
-      id: 'act-azk-1',
-      employeeName: 'Azka Pratama, S.Kom',
-      email: 'azka.pratama@example.com',
-      team: 'Tim IPDS & TI',
-      date: `${currentYear}-08-18`,
-      year: currentYear,
-      activityType: 'Pengolahan & Validasi Data',
-      subActivity: 'Integrasi Metadata Statistik Sektoral ke Portal Satu Data',
-      performancePlanId: 'plan-2026-6',
-      performancePlanTitle: 'Diseminasi Rilis Berita Resmi Statistik (BRS) & Portal Data',
-      progress: 80,
-      driveLink: 'https://drive.google.com/drive/my-drive',
-      driveFileId: 'drv-azk-01',
-      status: 'Submitted',
-      notes: 'Konfigurasi API endpoint telah berjalan stabil',
-      createdAt: now,
-      updatedAt: now
-    }
-  ];
+  const activities: DatabaseSchema['activities'] = [];
 
   const admin_logs: DatabaseSchema['admin_logs'] = [
     {
       id: 'log-1',
       adminEmail: 'rmasnanovita@gmail.com',
-      adminName: 'Masna Fitria, S.Stat',
+      adminName: 'Masna Novita Rahmaniar',
       action: 'INISIALISASI_SISTEM',
       targetType: 'System',
-      details: 'Inisialisasi database server OneInAPP berhasil dipasang.',
+      details: 'Inisialisasi database server SatuInApp siap pakai.',
       timestamp: now,
       ipAddress: '127.0.0.1'
     }
@@ -342,12 +158,12 @@ function getInitialDb(): DatabaseSchema {
     activities,
     admin_logs,
     settings: {
-      appName: 'OneInAPP',
+      appName: 'SatuInApp',
       monthlyTarget: 10,
       defaultYear: currentYear,
       adminEmail: 'rmasnanovita@gmail.com',
-      headOfTeamEmail: 'kepalateam@bps.go.id',
-      headOfOfficeEmail: 'kepalakantor@bps.go.id'
+      headOfTeamEmail: '',
+      headOfOfficeEmail: ''
     }
   };
 }
@@ -386,7 +202,7 @@ function logAdminAction(
   const db = loadDatabase();
   const newLog = {
     id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-    adminEmail: adminEmail || 'admin@oneinapp.local',
+    adminEmail: adminEmail || 'admin@satuinapp.local',
     adminName: adminName || 'Administrator',
     action,
     targetType,
@@ -409,7 +225,7 @@ function logAdminAction(
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'OneInAPP',
+    app: 'SatuInApp',
     databaseEngine: 'MySQL/MariaDB Relational Engine (Persistent Server DB)',
     timestamp: new Date().toISOString()
   });
@@ -946,7 +762,151 @@ app.get('/api/activities', (req, res) => {
   res.json(results);
 });
 
-app.post('/api/activities', (req, res) => {
+// --- MULTER MEMORY STORAGE FOR TEMPORARY PHOTO UPLOADS ---
+const uploadPhoto = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max size
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format file tidak didukung. Harap unggah foto berformat JPG, JPEG, PNG, atau WEBP.'));
+    }
+  }
+});
+
+const handleUploadMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  uploadPhoto.single('photo')(req, res, (err: any) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          message: 'Ukuran file foto melebihi batas maksimal 5 MB.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'Gagal memproses file foto.'
+      });
+    }
+    next();
+  });
+};
+
+// --- GOOGLE APPS SCRIPT PDF GENERATION HELPER ---
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby0uDCgvFf9vBmrxyPRU01eamWHO737HCl6XxmNWkKGXbfBYTUQ5-Xu3ifbbkH4-Qyhjw/exec';
+
+interface PhotoObject {
+  base64: string;
+  mimeType: string;
+}
+
+async function generatePdfViaAppsScript(activityData: any, photoObj?: PhotoObject | null) {
+  const appsScriptUrl = process.env.APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL;
+  const appsScriptToken = process.env.APPS_SCRIPT_TOKEN || '';
+
+  const photoPayload = photoObj ? {
+    base64: photoObj.base64,
+    mimeType: photoObj.mimeType
+  } : null;
+
+  // Comprehensive activity payload object covering all potential property names in Apps Script
+  const activityObj = {
+    id: activityData.id,
+    activityId: activityData.id,
+    employeeName: activityData.employeeName,
+    namaPegawai: activityData.employeeName,
+    nama: activityData.employeeName,
+    email: activityData.email,
+    team: activityData.team,
+    timKerja: activityData.team,
+    tim: activityData.team,
+    date: activityData.date,
+    tanggal: activityData.date,
+    year: activityData.year,
+    tahun: activityData.year,
+    activityType: activityData.activityType,
+    jenisKegiatan: activityData.activityType,
+    subActivity: activityData.subActivity,
+    rincianKegiatan: activityData.subActivity,
+    kegiatan: activityData.subActivity,
+    namaKegiatan: activityData.subActivity,
+    startTime: activityData.startTime || '08:00',
+    jamMulai: activityData.startTime || '08:00',
+    endTime: activityData.endTime || '16:00',
+    jamSelesai: activityData.endTime || '16:00',
+    performancePlanId: activityData.performancePlanId || '',
+    performancePlanTitle: activityData.performancePlanTitle || activityData.rencana_kinerja || '',
+    rencanaKinerja: activityData.rencana_kinerja || activityData.performancePlanTitle || '',
+    rencana_kinerja: activityData.rencana_kinerja || activityData.performancePlanTitle || '',
+    capaian: activityData.capaian || '',
+    realisasi: activityData.realisasi || 0,
+    satuan: activityData.satuan || 'Dokumen',
+    progress: activityData.progress || 100,
+    notes: activityData.notes || '',
+    catatan: activityData.notes || '',
+    status: activityData.status || 'Submitted',
+
+    // Photo object in exact JSON structure specified:
+    photo: photoPayload,
+    photoData: photoObj ? `data:${photoObj.mimeType};base64,${photoObj.base64}` : '',
+    photoBase64: photoObj ? photoObj.base64 : '',
+
+    existingPdfUrl: activityData.driveLink || '',
+    existingPdfFileId: activityData.driveFileId || '',
+    driveLink: activityData.driveLink || '',
+    driveFileId: activityData.driveFileId || ''
+  };
+
+  const payload = {
+    token: appsScriptToken,
+    action: 'generatePdf',
+    activityId: activityData.id,
+    id: activityData.id,
+    photo: photoPayload,
+    ...activityObj,
+    activity: activityObj,
+    kegiatan: activityObj,
+    data: activityObj,
+    activityData: activityObj,
+    payload: activityObj
+  };
+
+  try {
+    const response = await fetch(appsScriptUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google Apps Script HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const responseText = await response.text();
+    let resJson: any;
+    try {
+      resJson = JSON.parse(responseText);
+    } catch {
+      throw new Error(`Format respon Google Apps Script tidak valid: ${responseText.substring(0, 150)}`);
+    }
+
+    if (resJson.status === 'error' || resJson.success === false) {
+      throw new Error(resJson.message || resJson.error || 'Pembuatan PDF gagal di Google Apps Script.');
+    }
+
+    return resJson;
+  } catch (error: any) {
+    console.error(`[Apps Script Error] activityId=${activityData.id}:`, error.message);
+    throw error;
+  }
+}
+
+app.post('/api/activities', handleUploadMiddleware, async (req, res) => {
   const {
     id,
     employeeName,
@@ -961,36 +921,70 @@ app.post('/api/activities', (req, res) => {
     performancePlanTitle,
     rencana_kinerja,
     capaian,
+    realisasi,
+    satuan,
     progress,
     driveLink,
     driveFileId,
     status,
-    notes
+    notes,
+    photoData,
+    photo: bodyPhoto,
+    skipAppsScript
   } = req.body;
 
   if (!employeeName || !email || !date || !subActivity) {
     return res.status(400).json({ success: false, message: 'Data aktivitas belum lengkap.' });
   }
 
+  // Extract photo to RAM buffer Base64
+  let photoObj: PhotoObject | null = null;
+  if (req.file && req.file.buffer) {
+    photoObj = {
+      base64: req.file.buffer.toString('base64'),
+      mimeType: req.file.mimetype
+    };
+  } else if (bodyPhoto && typeof bodyPhoto === 'object' && bodyPhoto.base64) {
+    photoObj = {
+      base64: String(bodyPhoto.base64).replace(/^data:image\/[a-zA-Z]+;base64,/, ''),
+      mimeType: bodyPhoto.mimeType || 'image/jpeg'
+    };
+  } else if (photoData) {
+    let cleanBase64 = String(photoData);
+    let mimeType = 'image/jpeg';
+    if (cleanBase64.includes('data:image/png')) mimeType = 'image/png';
+    else if (cleanBase64.includes('data:image/webp')) mimeType = 'image/webp';
+    if (cleanBase64.includes('base64,')) {
+      cleanBase64 = cleanBase64.split('base64,')[1];
+    }
+    photoObj = {
+      base64: cleanBase64,
+      mimeType
+    };
+  }
+
   const db = loadDatabase();
   const yearFromDate = new Date(date).getFullYear() || new Date().getFullYear();
+  const activityId = id || `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
   const newActivity = {
-    id: id || `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-    employeeName: employeeName.trim(),
-    email: email.trim().toLowerCase(),
+    id: activityId,
+    employeeName: String(employeeName).trim(),
+    email: String(email).trim().toLowerCase(),
     team: team || 'Tim Umum',
     date,
     year: yearFromDate,
     activityType: activityType || 'Kegiatan Kinerja',
-    subActivity: subActivity.trim(),
+    subActivity: String(subActivity).trim(),
     startTime: startTime || '08:00',
     endTime: endTime || '16:00',
     performancePlanId: performancePlanId || '',
     performancePlanTitle: performancePlanTitle || rencana_kinerja || '',
     rencana_kinerja: rencana_kinerja || performancePlanTitle || '',
-    capaian: capaian || (notes ? notes.trim() : `${subActivity.trim()} telah dilaksanakan sesuai dengan rencana.`),
-    progress: Number(progress) || 0,
+    capaian: capaian || (notes ? String(notes).trim() : `${String(subActivity).trim()} telah dilaksanakan sesuai dengan rencana.`),
+    realisasi: Number(realisasi) || 0,
+    satuan: satuan || 'Dokumen',
+    progress: Number(progress) || 100,
     driveLink: driveLink || '',
     driveFileId: driveFileId || '',
     status: (status || 'Submitted') as 'Draft' | 'Submitted' | 'Deleted',
@@ -998,6 +992,26 @@ app.post('/api/activities', (req, res) => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+
+  // Trigger Google Apps Script PDF & Drive Generation
+  if (!skipAppsScript) {
+    try {
+      const appsScriptRes = await generatePdfViaAppsScript(newActivity, photoObj);
+      
+      if (appsScriptRes.pdfUrl || appsScriptRes.driveLink || appsScriptRes.folderUrl) {
+        newActivity.driveLink = appsScriptRes.pdfUrl || appsScriptRes.driveLink || appsScriptRes.folderUrl;
+      }
+      if (appsScriptRes.pdfFileId || appsScriptRes.driveFileId) {
+        newActivity.driveFileId = appsScriptRes.pdfFileId || appsScriptRes.driveFileId;
+      }
+    } catch (pdfError: any) {
+      console.error(`Gagal membuat PDF untuk aktivitas ${activityId}:`, pdfError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Gagal meng-generate PDF Laporan via Google Apps Script: ${pdfError.message}`
+      });
+    }
+  }
 
   db.activities.unshift(newActivity);
   saveDatabase(db);
@@ -1055,8 +1069,9 @@ app.post('/api/activities/bulk', (req, res) => {
   res.json({ success: true, count: created.length, activities: created });
 });
 
-app.put('/api/activities/:id', (req, res) => {
+app.put('/api/activities/:id', handleUploadMiddleware, async (req, res) => {
   const { id } = req.params;
+  const { photoData, photo: bodyPhoto, skipAppsScript, ...updateData } = req.body;
   const db = loadDatabase();
   const index = db.activities.findIndex(a => a.id === id);
 
@@ -1064,14 +1079,61 @@ app.put('/api/activities/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Aktivitas tidak ditemukan.' });
   }
 
-  db.activities[index] = {
+  // Extract photo to RAM buffer Base64
+  let photoObj: PhotoObject | null = null;
+  if (req.file && req.file.buffer) {
+    photoObj = {
+      base64: req.file.buffer.toString('base64'),
+      mimeType: req.file.mimetype
+    };
+  } else if (bodyPhoto && typeof bodyPhoto === 'object' && bodyPhoto.base64) {
+    photoObj = {
+      base64: String(bodyPhoto.base64).replace(/^data:image\/[a-zA-Z]+;base64,/, ''),
+      mimeType: bodyPhoto.mimeType || 'image/jpeg'
+    };
+  } else if (photoData) {
+    let cleanBase64 = String(photoData);
+    let mimeType = 'image/jpeg';
+    if (cleanBase64.includes('data:image/png')) mimeType = 'image/png';
+    else if (cleanBase64.includes('data:image/webp')) mimeType = 'image/webp';
+    if (cleanBase64.includes('base64,')) {
+      cleanBase64 = cleanBase64.split('base64,')[1];
+    }
+    photoObj = {
+      base64: cleanBase64,
+      mimeType
+    };
+  }
+
+  const updatedActivity = {
     ...db.activities[index],
-    ...req.body,
+    ...updateData,
     updatedAt: new Date().toISOString()
   };
 
+  if (!skipAppsScript) {
+    try {
+      const appsScriptRes = await generatePdfViaAppsScript(updatedActivity, photoObj);
+
+      if (appsScriptRes.pdfUrl || appsScriptRes.driveLink || appsScriptRes.folderUrl) {
+        updatedActivity.driveLink = appsScriptRes.pdfUrl || appsScriptRes.driveLink || appsScriptRes.folderUrl;
+      }
+      if (appsScriptRes.pdfFileId || appsScriptRes.driveFileId) {
+        updatedActivity.driveFileId = appsScriptRes.pdfFileId || appsScriptRes.driveFileId;
+      }
+    } catch (pdfError: any) {
+      console.error(`Gagal memperbarui PDF untuk ${id}:`, pdfError.message);
+      return res.status(500).json({
+        success: false,
+        message: `Gagal memperbarui PDF Laporan via Google Apps Script: ${pdfError.message}`
+      });
+    }
+  }
+
+  db.activities[index] = updatedActivity;
   saveDatabase(db);
-  res.json({ success: true, activity: db.activities[index] });
+
+  res.json({ success: true, activity: updatedActivity });
 });
 
 app.delete('/api/activities/:id', (req, res) => {
@@ -1136,6 +1198,237 @@ app.post('/api/upload', express.json({ limit: '20mb' }), (req, res) => {
   } catch (error: any) {
     console.error('Upload error:', error);
     res.status(500).json({ success: false, message: 'Gagal menyimpan file: ' + error.message });
+  }
+});
+
+// Helper to locate submitkipapp.exe or submitkiapp.zip across multiple possible locations
+function getSubmitKipappPath(): string | null {
+  const possiblePaths = [
+    path.join(process.cwd(), 'public', 'submitkipapp.exe'),
+    path.join(process.cwd(), 'submitkipapp.exe'),
+    path.join(DATA_DIR, 'submitkipapp.exe'),
+    path.join(UPLOADS_DIR, 'submitkipapp.exe'),
+    path.join(process.cwd(), 'public', 'submitkiapp.exe'),
+    path.join(process.cwd(), 'submitkiapp.exe'),
+    path.join(process.cwd(), 'public', 'SubmitKipapp.exe'),
+    path.join(process.cwd(), 'SubmitKipapp.exe')
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+
+  // Check for .zip files to auto-extract or serve
+  const possibleZipPaths = [
+    path.join(process.cwd(), 'public', 'submitkiapp.zip'),
+    path.join(process.cwd(), 'public', 'submitkipapp.zip'),
+    path.join(process.cwd(), 'submitkiapp.zip'),
+    path.join(process.cwd(), 'submitkipapp.zip'),
+    path.join(DATA_DIR, 'submitkiapp.zip'),
+    path.join(DATA_DIR, 'submitkipapp.zip')
+  ];
+
+  for (const zipPath of possibleZipPaths) {
+    if (fs.existsSync(zipPath)) {
+      try {
+        const publicDir = path.join(process.cwd(), 'public');
+        execSync(`unzip -o -q "${zipPath}" -d "${publicDir}"`);
+        const extractedExe = path.join(publicDir, 'submitkipapp.exe');
+        if (fs.existsSync(extractedExe)) {
+          return extractedExe;
+        }
+      } catch (e) {
+        console.error('Error auto-extracting zip:', e);
+      }
+      return zipPath;
+    }
+  }
+
+  // Also check if any file in root or public ends with kipapp.exe or kiapp.zip
+  try {
+    const rootFiles = fs.readdirSync(process.cwd());
+    const matchedRoot = rootFiles.find(f => (f.toLowerCase().includes('kipapp') || f.toLowerCase().includes('kiapp')) && (f.toLowerCase().endsWith('.exe') || f.toLowerCase().endsWith('.zip')));
+    if (matchedRoot) {
+      const fullPath = path.join(process.cwd(), matchedRoot);
+      if (fullPath.toLowerCase().endsWith('.zip')) {
+        try {
+          execSync(`unzip -o -q "${fullPath}" -d "${path.join(process.cwd(), 'public')}"`);
+          const extractedExe = path.join(process.cwd(), 'public', 'submitkipapp.exe');
+          if (fs.existsSync(extractedExe)) return extractedExe;
+        } catch (e) {}
+      }
+      return fullPath;
+    }
+
+    const publicDir = path.join(process.cwd(), 'public');
+    if (fs.existsSync(publicDir)) {
+      const pubFiles = fs.readdirSync(publicDir);
+      const matchedPub = pubFiles.find(f => (f.toLowerCase().includes('kipapp') || f.toLowerCase().includes('kiapp')) && (f.toLowerCase().endsWith('.exe') || f.toLowerCase().endsWith('.zip')));
+      if (matchedPub) {
+        const fullPath = path.join(publicDir, matchedPub);
+        if (fullPath.toLowerCase().endsWith('.zip')) {
+          try {
+            execSync(`unzip -o -q "${fullPath}" -d "${publicDir}"`);
+            const extractedExe = path.join(publicDir, 'submitkipapp.exe');
+            if (fs.existsSync(extractedExe)) return extractedExe;
+          } catch (e) {}
+        }
+        return fullPath;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return null;
+}
+
+// Check submitkipapp.exe availability or custom Google Drive link
+app.get('/api/app/check', (req, res) => {
+  const db = loadDatabase();
+  const driveLink = db.settings?.appDriveLink;
+
+  if (driveLink) {
+    let directUrl = driveLink;
+    const match = driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      directUrl = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    }
+    return res.json({
+      available: true,
+      isExternal: true,
+      filename: 'submitkipapp.exe',
+      downloadUrl: directUrl,
+      driveLink: driveLink,
+      message: 'File tersedia melalui tautan Google Drive.'
+    });
+  }
+
+  const exePath = getSubmitKipappPath();
+  if (exePath && fs.existsSync(exePath)) {
+    const stats = fs.statSync(exePath);
+    return res.json({
+      available: true,
+      isExternal: false,
+      filename: path.basename(exePath),
+      size: stats.size,
+      updatedAt: stats.mtime.toISOString(),
+      downloadUrl: '/api/app/download'
+    });
+  }
+  return res.json({
+    available: false,
+    filename: 'submitkipapp.exe',
+    message: 'File submitkipapp.exe belum diunggah ke server.'
+  });
+});
+
+// Download submitkipapp.exe or redirect to Google Drive
+app.get(['/api/app/download', '/submitkipapp.exe'], (req, res) => {
+  const db = loadDatabase();
+  const driveLink = db.settings?.appDriveLink;
+
+  if (driveLink) {
+    const match = driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return res.redirect(`https://drive.google.com/uc?export=download&id=${match[1]}`);
+    }
+    return res.redirect(driveLink);
+  }
+
+  const exePath = getSubmitKipappPath();
+  if (exePath && fs.existsSync(exePath)) {
+    return res.download(exePath, path.basename(exePath));
+  }
+  return res.status(404).json({
+    success: false,
+    message: 'File submitkipapp.exe belum diunggah ke server. Silakan hubungi admin atau unggah file tersebut.'
+  });
+});
+
+// Set Google Drive Link for Application
+app.post('/api/app/set-link', (req, res) => {
+  const { driveLink } = req.body;
+  const db = loadDatabase();
+  db.settings = db.settings || {};
+  db.settings.appDriveLink = driveLink ? driveLink.trim() : '';
+  saveDatabase(db);
+  res.json({ success: true, appDriveLink: db.settings.appDriveLink });
+});
+
+// Chunked Upload Endpoint for large files (supports .exe, .zip up to 250MB+)
+app.post('/api/app/chunk-upload', express.raw({ type: 'application/octet-stream', limit: '20mb' }), (req, res) => {
+  try {
+    const chunkIndex = Number(req.headers['x-chunk-index']);
+    const totalChunks = Number(req.headers['x-total-chunks']);
+    const rawFilename = (req.headers['x-file-name'] as string) || 'submitkipapp.exe';
+    const cleanFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    
+    const tempDir = path.join(DATA_DIR, 'chunks', cleanFilename);
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const chunkPath = path.join(tempDir, `part_${chunkIndex}`);
+    fs.writeFileSync(chunkPath, req.body);
+
+    if (chunkIndex === totalChunks - 1) {
+      const publicDir = path.join(process.cwd(), 'public');
+      if (!fs.existsSync(publicDir)) {
+        fs.mkdirSync(publicDir, { recursive: true });
+      }
+
+      const targetPath = path.join(publicDir, cleanFilename);
+      const writeStream = fs.createWriteStream(targetPath);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const part = path.join(tempDir, `part_${i}`);
+        if (fs.existsSync(part)) {
+          const buffer = fs.readFileSync(part);
+          writeStream.write(buffer);
+          try { fs.unlinkSync(part); } catch (e) {}
+        }
+      }
+      writeStream.end();
+
+      // If zip file, extract it into public/
+      if (cleanFilename.toLowerCase().endsWith('.zip')) {
+        try {
+          execSync(`unzip -o -q "${targetPath}" -d "${publicDir}"`);
+          console.log(`Successfully extracted ${cleanFilename} to public/`);
+        } catch (unzipErr) {
+          console.error('Failed to unzip uploaded file:', unzipErr);
+        }
+      }
+
+      try { fs.rmdirSync(tempDir); } catch (e) {}
+
+      // Clear any custom drive link if local file is uploaded
+      const db = loadDatabase();
+      if (db.settings?.appDriveLink) {
+        db.settings.appDriveLink = '';
+        saveDatabase(db);
+      }
+
+      return res.json({
+        success: true,
+        completed: true,
+        filename: cleanFilename,
+        message: 'File berhasil diunggah dan disimpan di server!'
+      });
+    }
+
+    return res.json({
+      success: true,
+      completed: false,
+      chunkIndex,
+      message: `Chunk ${chunkIndex + 1}/${totalChunks} diterima.`
+    });
+  } catch (err: any) {
+    console.error('Chunk upload error:', err);
+    res.status(500).json({ success: false, message: 'Gagal mengunggah file: ' + err.message });
   }
 });
 
@@ -1427,7 +1720,7 @@ CREATE TABLE IF NOT EXISTS \`users\` (
   sql += `COMMIT;\n\n/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;\n/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;\n/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n`;
 
   res.setHeader('Content-Type', 'application/sql');
-  res.setHeader('Content-Disposition', 'attachment; filename="oneinapp_database_dump.sql"');
+  res.setHeader('Content-Disposition', 'attachment; filename="satuinapp_database_dump.sql"');
   res.send(sql);
 });
 
@@ -1438,12 +1731,12 @@ app.post('/api/admin/seed-default', (req, res) => {
   saveDatabase(initial);
 
   logAdminAction(
-    adminEmail || 'admin@oneinapp.local',
+    adminEmail || 'admin@satuinapp.local',
     adminName || 'Administrator',
     'RESET_DATABASE_DEFAULT',
     'System',
     undefined,
-    'Reset dan inisialisasi ulang database server OneInAPP ke data master default.'
+    'Reset dan inisialisasi ulang database server SatuInApp ke data master default.'
   );
 
   res.json({ success: true, message: 'Database server berhasil diinisialisasi ulang ke data standar.' });
@@ -1466,7 +1759,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`OneInAPP Backend Server running at http://0.0.0.0:${PORT}`);
+    console.log(`SatuInApp Backend Server running at http://0.0.0.0:${PORT}`);
   });
 }
 

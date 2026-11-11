@@ -343,7 +343,7 @@ export default function ImportExcelModal({
           'Jam Selesai': '16:00',
           'Kegiatan': 'Melaksanakan pengumpulan dan pemeriksaan metadata statistik sektoral',
           'Progres': 100,
-          'Capaian': 'Pengumpulan dan pemeriksaan metadata statistik sektoral dilaksanakan dengan baik.',
+          'Capaian': 'Pengumpulan dan pemeriksaan metadata statistik sektoral dilaksanakan dengan baik',
           'Realisasi': 10,
           'Data Dukung (Link PDF Drive)': 'https://drive.google.com/file/d/1examplePdfLink/view'
         },
@@ -354,7 +354,7 @@ export default function ImportExcelModal({
           'Jam Selesai': '16:00',
           'Kegiatan': 'Pemeriksaan kelengkapan dokumen kuesioner Sakernas',
           'Progres': 100,
-          'Capaian': 'Pemeriksaan kelengkapan dokumen kuesioner Sakernas dilaksanakan dengan baik.',
+          'Capaian': 'Pemeriksaan kelengkapan dokumen kuesioner Sakernas dilaksanakan dengan baik',
           'Realisasi': 20,
           'Data Dukung (Link PDF Drive)': 'https://drive.google.com/file/d/2examplePdfLink/view'
         },
@@ -365,7 +365,7 @@ export default function ImportExcelModal({
           'Jam Selesai': '16:00',
           'Kegiatan': 'Melaksanakan listing dan pencacahan sampel survei Susenas',
           'Progres': 100,
-          'Capaian': 'Listing dan pencacahan sampel survei Susenas dilaksanakan dengan baik.',
+          'Capaian': 'Listing dan pencacahan sampel survei Susenas dilaksanakan dengan baik',
           'Realisasi': 50,
           'Data Dukung (Link PDF Drive)': 'https://drive.google.com/file/d/3examplePdfLink/view'
         }
@@ -622,7 +622,7 @@ export default function ImportExcelModal({
             rawJamSelesai: rawJamSelesai || '16:00',
             rawKegiatan,
             rawProgres: isNaN(rawProgresNum) ? 100 : rawProgresNum,
-            rawCapaian: rawCapaian || (rawKegiatan ? `${rawKegiatan} dilaksanakan dengan baik.` : ''),
+            rawCapaian: rawCapaian || (rawKegiatan ? `${rawKegiatan} dilaksanakan dengan baik` : ''),
             rawRealisasi: isNaN(rawRealisasiNum) ? 0 : rawRealisasiNum,
             rawDriveLink: rawDriveLink || DEFAULT_DRIVE_FOLDER,
             isValid,

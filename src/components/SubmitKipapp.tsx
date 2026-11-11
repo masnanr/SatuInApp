@@ -10,7 +10,9 @@ import {
   FileSpreadsheet, ArrowUp, ArrowDown, Trash2, Download, 
   CheckCircle, RefreshCw, Calendar, CheckSquare, Square, 
   FileJson, Terminal, Copy, Check, ExternalLink, X, Play, 
-  BookOpen, FolderOpen, MousePointer, HelpCircle, Sparkles, ChevronRight
+  BookOpen, FolderOpen, MousePointer, HelpCircle, Sparkles, ChevronRight,
+  Monitor, Rocket, Info, AlertCircle, Laptop, FileDown,
+  UploadCloud, Link as LinkIcon, FileArchive, ShieldCheck
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -18,6 +20,7 @@ interface SubmitKipappProps {
   userEmail: string;
   allActivities: Activity[];
   onNotify: (msg: string, type: 'success' | 'error' | 'info') => void;
+  isAdmin?: boolean;
 }
 
 interface KipappRow {
@@ -32,7 +35,9 @@ interface KipappRow {
   status: string;
 }
 
-export default function SubmitKipapp({ userEmail, allActivities, onNotify }: SubmitKipappProps) {
+const SUBMIT_KIPAPP_DOWNLOAD_URL = 'https://drive.google.com/file/d/1tYrm0_QIvCo5GGg_6uwjj8xA_J0ICRy1/view?usp=sharing';
+
+export default function SubmitKipapp({ userEmail, allActivities, onNotify, isAdmin }: SubmitKipappProps) {
   // Filters
   const [selectedMonth, setSelectedMonth] = useState<string>(
     String(new Date().getMonth() + 1).padStart(2, '0')
@@ -40,6 +45,26 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
   const [selectedYear, setSelectedYear] = useState<string>(
     String(new Date().getFullYear())
   );
+
+  // Desktop App State (.exe)
+  const [appStatus, setAppStatus] = useState<{
+    available: boolean;
+    isExternal?: boolean;
+    filename: string;
+    size?: number;
+    updatedAt?: string;
+    driveLink?: string;
+    downloadUrl?: string;
+  } | null>(null);
+  const [isCheckingApp, setIsCheckingApp] = useState(false);
+
+  // Admin App Upload / Drive Link Modal States
+  const [showAdminUploadModal, setShowAdminUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [customDriveLink, setCustomDriveLink] = useState('');
+  const [isSavingDriveLink, setIsSavingDriveLink] = useState(false);
 
   // Selection states
   const [matchingActivities, setMatchingActivities] = useState<Activity[]>([]);
@@ -52,6 +77,111 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
   // Tutorial Modal & Copy States
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Check submitkipapp.exe status on mount
+  const checkAppStatus = async () => {
+    try {
+      setIsCheckingApp(true);
+      const res = await fetch('/api/app/check');
+      if (res.ok) {
+        const data = await res.json();
+        setAppStatus(data);
+      }
+    } catch (e) {
+      console.error('Failed to check app status:', e);
+    } finally {
+      setIsCheckingApp(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAppStatus();
+  }, []);
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes) return '';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const handleDownloadApp = () => {
+    window.open(SUBMIT_KIPAPP_DOWNLOAD_URL, '_blank');
+  };
+
+  // Upload file in chunks to bypass 50MB AI Studio upload limits (supports up to 250MB+)
+  const handleChunkedUpload = async () => {
+    if (!uploadFile) {
+      onNotify('Pilih file .exe atau .zip terlebih dahulu!', 'error');
+      return;
+    }
+    try {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      const chunkSize = 4 * 1024 * 1024; // 4MB per chunk
+      const totalChunks = Math.ceil(uploadFile.size / chunkSize);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(uploadFile.size, start + chunkSize);
+        const chunk = uploadFile.slice(start, end);
+
+        const res = await fetch('/api/app/chunk-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'x-chunk-index': String(i),
+            'x-total-chunks': String(totalChunks),
+            'x-file-name': uploadFile.name
+          },
+          body: chunk
+        });
+
+        if (!res.ok) {
+          throw new Error(`Gagal mengunggah potongan ${i + 1}/${totalChunks}`);
+        }
+
+        setUploadProgress(Math.round(((i + 1) / totalChunks) * 100));
+      }
+
+      onNotify(`File "${uploadFile.name}" berhasil diunggah dan siap diunduh oleh pegawai!`, 'success');
+      setShowAdminUploadModal(false);
+      setUploadFile(null);
+      setUploadProgress(0);
+      checkAppStatus();
+    } catch (err: any) {
+      onNotify('Upload gagal: ' + err.message, 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Save Google Drive download link
+  const handleSaveDriveLink = async () => {
+    if (!customDriveLink.trim()) {
+      onNotify('Masukkan link Google Drive yang valid!', 'error');
+      return;
+    }
+    try {
+      setIsSavingDriveLink(true);
+      const res = await fetch('/api/app/set-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driveLink: customDriveLink })
+      });
+      const data = await res.json();
+      if (data.success) {
+        onNotify('Link Google Drive berhasil disimpan! Tombol unduh pegawai kini terhubung ke file Drive Anda.', 'success');
+        setShowAdminUploadModal(false);
+        checkAppStatus();
+      }
+    } catch (err: any) {
+      onNotify('Gagal menyimpan link: ' + err.message, 'error');
+    } finally {
+      setIsSavingDriveLink(false);
+    }
+  };
 
   // Load activities logged by this user for the selected month & year
   useEffect(() => {
@@ -107,7 +237,7 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
       jenisKegiatan: act.activityType || 'Kegiatan Kinerja',
       subKegiatan: act.subActivity,
       deskripsi: act.subActivity,
-      capaian: act.capaian || `${act.subActivity} dilaksanakan dengan baik.`,
+      capaian: act.capaian || `${act.subActivity} dilaksanakan dengan baik`,
       progress: act.progress,
       linkLampiran: act.driveLink || '',
       status: act.status
@@ -208,7 +338,7 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
             jam_selesai: orig?.endTime || '16:00',
             kegiatan: row.subKegiatan,
             progres: 100,
-            capaian: row.capaian || `${row.subKegiatan} dilaksanakan dengan baik.`,
+            capaian: row.capaian || `${row.subKegiatan} dilaksanakan dengan baik`,
             data_dukung: row.linkLampiran || '',
             masuk_capaian_skp: true
           };
@@ -223,7 +353,7 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
             jam_selesai: act.endTime || '16:00',
             kegiatan: act.subActivity,
             progres: 100,
-            capaian: act.capaian || act.notes || `${act.subActivity} dilaksanakan dengan baik.`,
+            capaian: act.capaian || act.notes || `${act.subActivity} dilaksanakan dengan baik`,
             data_dukung: act.driveLink || '',
             masuk_capaian_skp: true
           }));
@@ -287,7 +417,70 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
       {/* HEADER SECTION */}
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 font-display">Submit KIPAPP Bulanan</h1>
-        <p className="text-sm text-slate-500">Pilih, urutkan, dan kemas kumpulan aktivitas harian Anda menjadi laporan bulanan KIPAPP atau jalankan ke aplikasi Python.</p>
+        <p className="text-sm text-slate-500">Pilih, urutkan, dan kemas kumpulan aktivitas harian Anda menjadi laporan bulanan KIPAPP atau jalankan ke aplikasi otomatisasi.</p>
+      </div>
+
+      {/* DESKTOP APP DOWNLOAD HIGHLIGHT BANNER */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden border border-indigo-800/40">
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                <Rocket className="w-3.5 h-3.5 text-cyan-400" /> Baru: Desktop Automation
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-slate-300">
+                Windows (.exe)
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <CheckCircle className="w-3 h-3" /> Siap Diunduh via Google Drive
+              </span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowAdminUploadModal(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-colors cursor-pointer shadow-xs ml-auto sm:ml-0"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-slate-900" />
+                  <span>Upload File / Link Drive (Admin)</span>
+                </button>
+              )}
+            </div>
+
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-white">
+                Download Aplikasi Submit KIPAPP
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">
+                Jalankan otomatisasi pengisian SKP / KIPAPP bulanan langsung dari laptop Anda <strong>tanpa perlu instalasi Python ataupun buka Command Prompt (CMD)</strong>. Cukup unduh <strong>Aplikasi SubmitKIPAPP</strong>, lalu buka aplikasinya!
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full lg:w-auto">
+            <a
+              href={SUBMIT_KIPAPP_DOWNLOAD_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-indigo-900/50 hover:shadow-indigo-800/60 transition-all duration-200 cursor-pointer active:scale-98"
+            >
+              <Download className="w-4 h-4 text-cyan-300" />
+              <span>Unduh Aplikasi SubmitKIPAPP</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setShowTutorialModal(true)}
+              className="px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/10 transition-all cursor-pointer text-xs font-bold inline-flex items-center gap-2"
+              title="Lihat Petunjuk Penggunaan"
+            >
+              <BookOpen className="w-4 h-4 text-indigo-300" />
+              <span>Panduan</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* SELECTION CARD */}
@@ -375,16 +568,8 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
             <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setShowTutorialModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer"
-              >
-                <BookOpen className="w-4 h-4 text-indigo-600" /> Tutorial Upload Otomatis (Python)
-              </button>
-
-              <button
-                type="button"
                 onClick={handleExportToJson}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer"
               >
                 <FileJson className="w-4 h-4 text-emerald-300" /> Download kegiatan.json ({selectedActIds.length} Terpilih)
               </button>
@@ -411,16 +596,8 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setShowTutorialModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                <BookOpen className="w-4 h-4 text-indigo-600" /> Tutorial Upload
-              </button>
-
-              <button
-                type="button"
                 onClick={handleExportToJson}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
               >
                 <FileJson className="w-4 h-4 text-emerald-400" /> Download kegiatan.json
               </button>
@@ -528,14 +705,14 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-xs">
-                    <BookOpen className="w-5 h-5" />
+                    <Rocket className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 font-display">
-                      Tutorial Upload Otomatis ke KIPAPP
+                      Panduan Otomatisasi Submit KIPAPP (.exe)
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Panduan menjalankan skrip Python (<code className="font-mono text-indigo-600 font-bold">main.py</code>) untuk upload otomatis tanpa input manual.
+                      Petunjuk pengisian otomatis laporan harian SKP / KIPAPP menggunakan aplikasi desktop.
                     </p>
                   </div>
                 </div>
@@ -553,24 +730,24 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
                 <div className="flex items-center gap-2.5">
                   <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                   <div>
-                    <span className="font-bold">File kegiatan.json sudah siap diekspor!</span>
+                    <span className="font-bold">Aplikasi Desktop Siap Digunakan</span>
                     <p className="text-[11px] text-emerald-800">
-                      Simpan file ini ke dalam folder aplikasi Python <strong>SatuInApp</strong> Anda.
+                      Unduh dan jalankan Aplikasi SubmitKIPAPP di komputer/laptop Windows Anda.
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleExportToJson}
-                  className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
+                <a
+                  href={SUBMIT_KIPAPP_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
                 >
-                  <Download className="w-4 h-4" /> Download kegiatan.json
-                </button>
+                  <Download className="w-4 h-4 text-cyan-400" /> Unduh Aplikasi SubmitKIPAPP
+                </a>
               </div>
 
-              {/* STEP BY STEP TUTORIAL */}
-              <div className="space-y-6 text-xs text-slate-700">
-
+              {/* STEP BY STEP TUTORIAL CONTENT */}
+              <div className="space-y-5 text-xs text-slate-700">
                 {/* TAHAP 1 */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
                   <div className="flex items-center gap-2.5">
@@ -578,20 +755,21 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
                       1
                     </span>
                     <h4 className="font-extrabold text-sm text-slate-900 font-display">
-                      Buka Folder Aplikasi SatuInApp &amp; Masukkan File kegiatan.json
+                      Download Aplikasi SubmitKIPAPP
                     </h4>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-xs pl-8">
-                    Buka folder tempat aplikasi Python <strong>SatuInApp</strong> disimpan di komputer/laptop Anda (misalnya di folder <code className="bg-slate-200/70 px-1.5 py-0.5 rounded font-mono text-slate-800">Downloads \ SatuInApp</code>). Pastikan file <strong>kegiatan.json</strong> diletakkan berdampingan dengan file <strong>main.py</strong> seperti pada foto berikut:
+                    Unduh file <strong>Aplikasi SubmitKIPAPP</strong> melalui tombol di atas atau tombol di banner utama, lalu simpan di folder laptop/komputer Anda (misalnya di folder <code className="bg-slate-200/70 px-1.5 py-0.5 rounded font-mono text-slate-800">Downloads</code> atau folder kerja Anda).
                   </p>
                   <div className="pl-8 pt-1">
-                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
-                      <img 
-                        src="/assets/aistudio/image_67137071.png" 
-                        alt="Folder SatuInApp berisi main.py dan kegiatan.json" 
-                        className="w-full max-h-56 object-contain bg-slate-100"
-                      />
-                    </div>
+                    <a
+                      href={SUBMIT_KIPAPP_DOWNLOAD_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Unduh Aplikasi SubmitKIPAPP
+                    </a>
                   </div>
                 </div>
 
@@ -602,146 +780,214 @@ export default function SubmitKipapp({ userEmail, allActivities, onNotify }: Sub
                       2
                     </span>
                     <h4 className="font-extrabold text-sm text-slate-900 font-display">
-                      Klik Bagian Atas File Explorer &amp; Tekan Copy Alamat Path
+                      Buka Browser &amp; Tampilkan Form "Add Capaian Kegiatan Perhari"
                     </h4>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-xs pl-8">
-                    Pada jendela File Explorer di folder tersebut, <strong>klik bagian atas (address bar)</strong> sampai seluruh alamat direktori terpilih, lalu klik kanan dan tekan <strong>Copy</strong> (atau tekan tombol <kbd className="px-1.5 py-0.5 bg-white rounded border border-slate-300 font-mono">Ctrl + C</kbd> di keyboard):
-                  </p>
-                  <div className="pl-8 pt-1">
-                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
-                      <img 
-                        src="/assets/aistudio/image_248ec117.png" 
-                        alt="Klik address bar di bagian atas dan copy" 
-                        className="w-full max-h-36 object-contain bg-slate-100"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* TAHAP 3 */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center font-display shadow-xs flex-shrink-0">
-                      3
-                    </span>
-                    <h4 className="font-extrabold text-sm text-slate-900 font-display">
-                      Buka Command Prompt (CMD) &amp; Masukkan Perintah cd
-                    </h4>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed text-xs pl-8">
-                    Buka <strong>Command Prompt</strong> (tekan tombol <kbd className="px-1.5 py-0.5 bg-white rounded border border-slate-300 font-mono">Win + R</kbd>, ketik <strong className="text-indigo-600">cmd</strong>, lalu tekan Enter). Ketik <code className="bg-slate-200/70 px-1.5 py-0.5 rounded font-mono font-bold text-slate-800">cd </code> (dengan spasi) lalu paste alamat hasil copy dari Tahap 2:
-                  </p>
-                  <div className="pl-8 pt-1 space-y-2">
-                    <div className="flex items-center justify-between gap-3 bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-xs">
-                      <span className="truncate">cd C:\Users\DELL\Downloads\SatuInApp</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy('cd C:\\Users\\DELL\\Downloads\\SatuInApp', 'cd')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-sans font-bold flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
-                      >
-                        {copiedKey === 'cd' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedKey === 'cd' ? 'Tersalin!' : 'Salin Contoh'}</span>
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      *Sesuaikan <code className="font-mono">C:\Users\DELL\...</code> dengan alamat folder di laptop Anda sendiri. Lalu tekan <strong>Enter</strong>.
-                    </p>
-                  </div>
-                </div>
-
-                {/* TAHAP 4 */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center font-display shadow-xs flex-shrink-0">
-                      4
-                    </span>
-                    <h4 className="font-extrabold text-sm text-slate-900 font-display">
-                      Jalankan Skrip Python (python main.py)
-                    </h4>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed text-xs pl-8">
-                    Di Command Prompt yang sama, ketik perintah berikut lalu tekan <strong>Enter</strong>:
-                  </p>
-                  <div className="pl-8 pt-1">
-                    <div className="flex items-center justify-between gap-3 bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-xs">
-                      <span>python main.py</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy('python main.py', 'python')}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-sans font-bold flex items-center gap-1 cursor-pointer transition-colors flex-shrink-0"
-                      >
-                        {copiedKey === 'python' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedKey === 'python' ? 'Tersalin!' : 'Salin Perintah'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TAHAP 5 */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center font-display shadow-xs flex-shrink-0">
-                      5
-                    </span>
-                    <h4 className="font-extrabold text-sm text-slate-900 font-display">
-                      Login ke Portal &amp; Buka Tampilan "Add Capaian Kegiatan Perhari"
-                    </h4>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed text-xs pl-8">
-                    Jendela browser akan terbuka. Lakukan login ke akun SKP Anda dan navigasikan hingga <strong>pop-up form "Add Capaian Kegiatan Perhari" terbuka persis seperti foto di bawah ini</strong>:
+                    Buka browser dan login ke akun SKP / KIPAPP Anda. Masuk ke halaman kegiatan bulanan, lalu klik tombol tambah hingga <strong>form pop-up "Add Capaian Kegiatan Perhari" terbuka</strong> seperti gambar berikut:
                   </p>
                   <div className="pl-8 pt-1">
                     <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
                       <img 
                         src="/assets/aistudio/image_89d8f2fa.png" 
                         alt="Tampilan Add Capaian Kegiatan Perhari di portal" 
-                        className="w-full max-h-72 object-contain bg-slate-50"
+                        className="w-full max-h-64 object-contain bg-slate-50"
                       />
                     </div>
-                    <p className="text-[11px] text-amber-700 font-semibold bg-amber-50 p-2.5 rounded-xl border border-amber-200 mt-2">
+                    <p className="text-[11px] text-amber-800 font-semibold bg-amber-50 p-2.5 rounded-xl border border-amber-200 mt-2">
                       ⚠️ <strong>Penting:</strong> Jangan isi form secara manual. Biarkan form pop-up ini tetap terbuka di browser Anda!
                     </p>
                   </div>
                 </div>
 
-                {/* TAHAP 6 */}
+                {/* TAHAP 3 */}
                 <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 sm:p-5 space-y-3">
                   <div className="flex items-center gap-2.5">
                     <span className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-black flex items-center justify-center font-display shadow-xs flex-shrink-0">
-                      6
+                      3
                     </span>
                     <h4 className="font-extrabold text-sm text-emerald-950 font-display">
-                      Tekan ENTER di Command Prompt &amp; Skrip Akan Jalan Sendiri!
+                      Klik 2x Aplikasi SubmitKIPAPP &amp; Tekan ENTER di Aplikasinya!
                     </h4>
                   </div>
                   <div className="pl-8 space-y-2">
                     <p className="text-emerald-900 leading-relaxed text-xs">
-                      Saat tampilan pop-up pada Foto 3 di atas sudah terbuka di browser, <strong>kembalilah ke jendela Command Prompt, lalu cukup tekan tombol ENTER</strong>.
+                      Buka file <strong>Aplikasi SubmitKIPAPP</strong> (klik ganda). Jendela aplikasi akan terbuka. Cukup tekan tombol <strong>ENTER</strong> pada keyboard Anda.
                     </p>
-                    <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xs text-emerald-900 font-medium">
-                      🎉 <strong>Otomatis Jalan Sendiri:</strong> Skrip Python akan secara otomatis mengisi tanggal, rincian kegiatan, progres, capaian, dan link data dukung dari file <strong>kegiatan.json</strong> satu per satu hingga semua kegiatan berhasil tersimpan!
+                    <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xs text-emerald-900 font-medium space-y-1">
+                      <div className="font-bold flex items-center gap-1.5 text-emerald-700">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        <span>Otomatisasi Berjalan Mandiri:</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        Aplikasi akan secara otomatis mengisi tanggal, uraian sub kegiatan, progres (100%), capaian, dan link data dukung ke form browser satu per satu sampai semua kegiatan tersimpan tuntas!
+                      </p>
                     </div>
                   </div>
                 </div>
-
               </div>
 
               {/* MODAL FOOTER */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleExportToJson}
+                <a
+                  href={SUBMIT_KIPAPP_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noreferrer"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                 >
-                  <Download className="w-4 h-4" /> Download kegiatan.json
-                </button>
+                  <Download className="w-4 h-4 text-cyan-300" /> Unduh Aplikasi SubmitKIPAPP
+                </a>
+
                 <button
                   type="button"
                   onClick={() => setShowTutorialModal(false)}
                   className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Tutup Panduan
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ADMIN UPLOAD & DRIVE LINK MODAL */}
+      <AnimatePresence>
+        {showAdminUploadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl border border-slate-100 space-y-6 max-h-[92vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 font-display">
+                      Kelola File Aplikasi KIPAPP
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Bypass limit 50MB AI Studio via Chunk Upload atau tautkan Google Drive.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminUploadModal(false)}
+                  className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* METHOD 1: CHUNKED DIRECT UPLOAD */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">1</span>
+                  <h4 className="font-bold text-sm text-slate-900 font-display">
+                    Upload File Langsung (.exe atau .zip)
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Dukungan upload bertahap (chunking) hingga <strong>250 MB</strong>. Jika mengunggah file <code>.zip</code>, server akan otomatis mengekstrak file <code>.exe</code> di dalamnya.
+                </p>
+
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    accept=".exe,.zip"
+                    disabled={isUploading}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setUploadFile(e.target.files[0]);
+                      }
+                    }}
+                    className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer bg-white p-2 rounded-xl border border-slate-200"
+                  />
+
+                  {uploadFile && (
+                    <div className="text-xs text-slate-600 flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200 font-mono">
+                      <span className="truncate">{uploadFile.name}</span>
+                      <span className="font-bold text-indigo-600 flex-shrink-0 ml-2">
+                        {formatBytes(uploadFile.size)}
+                      </span>
+                    </div>
+                  )}
+
+                  {isUploading && (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] font-bold text-slate-700">
+                        <span>Mengunggah ke server...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-indigo-600 h-2 transition-all duration-200"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={!uploadFile || isUploading}
+                    onClick={handleChunkedUpload}
+                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    <span>{isUploading ? `Mengunggah (${uploadProgress}%)...` : 'Mulai Upload File'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* METHOD 2: GOOGLE DRIVE LINK */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center">2</span>
+                  <h4 className="font-bold text-sm text-slate-900 font-display">
+                    Atau Tautkan Link Google Drive (Bebas Batas Ukuran)
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Jika file sudah Anda upload ke Google Drive, masukkan tautan share di bawah ini. Tombol download pegawai akan langsung mengarah ke file tersebut.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 px-3 py-2">
+                    <LinkIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <input
+                      type="url"
+                      value={customDriveLink}
+                      onChange={(e) => setCustomDriveLink(e.target.value)}
+                      placeholder="https://drive.google.com/file/d/.../view?usp=sharing"
+                      className="w-full text-xs text-slate-800 focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isSavingDriveLink}
+                    onClick={handleSaveDriveLink}
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{isSavingDriveLink ? 'Menyimpan Link...' : 'Simpan Link Google Drive'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAdminUploadModal(false)}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Tutup
                 </button>
               </div>
             </motion.div>

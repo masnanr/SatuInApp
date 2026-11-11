@@ -144,7 +144,7 @@ export default function TeamManagement({
             Master Tim Kerja Kantor
           </h1>
           <p className="text-sm text-slate-500">
-            Kelola daftar tim kerja teknis dan fungsional pada database server OneInAPP.
+            Kelola daftar tim kerja teknis dan fungsional pada database server SatuInApp.
           </p>
         </div>
 
@@ -286,7 +286,7 @@ export default function TeamManagement({
                   type="text"
                   value={formData.leaderName}
                   onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
-                  placeholder="Masna Fitria, S.Stat"
+                  placeholder="Masna Novita Rahmaniar"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
                 />
               </div>

@@ -141,7 +141,7 @@ export default function App() {
       const verifyRes = await verifyUserLogin(email, password, selectedRole);
 
       if (!verifyRes.success || !verifyRes.user) {
-        setLoginErrorMessage(verifyRes.message || 'Akses ditolak oleh Database Server OneInAPP.');
+        setLoginErrorMessage(verifyRes.message || 'Akses ditolak oleh Database Server SatuInApp.');
         setNeedsAuth(true);
         triggerNotify(verifyRes.message || 'Akses ditolak.', 'error');
         setAuthLoading(false);
@@ -183,7 +183,7 @@ export default function App() {
 
   // Logout handler
   const handleLogout = async () => {
-    const confirmLogout = window.confirm('Apakah Anda yakin ingin keluar dari OneInAPP?');
+    const confirmLogout = window.confirm('Apakah Anda yakin ingin keluar dari SatuInApp?');
     if (!confirmLogout) return;
 
     try {
@@ -202,7 +202,7 @@ export default function App() {
 
   const handleSaveSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
-    localStorage.setItem('oneinapp_settings', JSON.stringify(newSettings));
+    localStorage.setItem('satuinapp_settings', JSON.stringify(newSettings));
   };
 
   if (authLoading) {
@@ -487,7 +487,7 @@ export default function App() {
             </div>
 
             {/* STATS OVERVIEW CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div 
                 onClick={() => setActiveTab('users')}
                 className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs hover:shadow-md transition-all cursor-pointer"
@@ -533,22 +533,6 @@ export default function App() {
                 <div className="mt-4 text-3xl font-black font-display text-slate-900">{performancePlans.length}</div>
                 <div className="mt-1 text-xs text-amber-600 font-bold flex items-center gap-1">
                   Atur Target Tahunan &rarr;
-                </div>
-              </div>
-
-              <div 
-                onClick={() => setActiveTab('logs')}
-                className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs hover:shadow-md transition-all cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Log Audit Admin</div>
-                  <div className="p-2.5 rounded-2xl bg-purple-50 text-purple-600 border border-purple-100">
-                    <History className="w-5 h-5" />
-                  </div>
-                </div>
-                <div className="mt-4 text-3xl font-black font-display text-slate-900">{adminLogs.length}</div>
-                <div className="mt-1 text-xs text-purple-600 font-bold flex items-center gap-1">
-                  Lihat Riwayat Perubahan &rarr;
                 </div>
               </div>
             </div>
@@ -615,7 +599,7 @@ export default function App() {
           <UserManagement
             users={users}
             teams={teamNames}
-            currentAdminEmail={user.email || 'admin@oneinapp.local'}
+            currentAdminEmail={user.email || 'admin@satuinapp.local'}
             currentAdminName={currentUserAccount?.name || user.displayName || 'Administrator'}
             token={token || undefined}
             onRefresh={fetchAllServerData}
@@ -626,7 +610,7 @@ export default function App() {
         {userRole === 'admin' && activeTab === 'teams' && (
           <TeamManagement
             teams={teams}
-            currentAdminEmail={user.email || 'admin@oneinapp.local'}
+            currentAdminEmail={user.email || 'admin@satuinapp.local'}
             currentAdminName={currentUserAccount?.name || user.displayName || 'Administrator'}
             onRefresh={fetchAllServerData}
             onNotify={triggerNotify}
@@ -637,7 +621,7 @@ export default function App() {
           <PerformancePlanManagement
             plans={performancePlans}
             teams={teams}
-            currentAdminEmail={user.email || 'admin@oneinapp.local'}
+            currentAdminEmail={user.email || 'admin@satuinapp.local'}
             currentAdminName={currentUserAccount?.name || user.displayName || 'Administrator'}
             onRefresh={fetchAllServerData}
             onNotify={triggerNotify}
@@ -677,6 +661,7 @@ export default function App() {
             userEmail={user.email || ''}
             allActivities={activities}
             onNotify={triggerNotify}
+            isAdmin={userRole === 'admin'}
           />
         )}
 
@@ -701,9 +686,8 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className="bg-white border-t border-slate-200/80 py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 space-y-1">
-          <p><strong>SatuInApp</strong> &copy; {new Date().getFullYear()} • Sistem Terpadu Pelaporan Kinerja Pegawai</p>
-          <p className="text-[11px] text-slate-400">Database Terpusat 100% Server Database (Kompatibel dengan MySQL / phpMyAdmin) &amp; Google Drive.</p>
+        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+          <p><strong>SatuInApp</strong> &copy; 2026 • Developed by Masna Novita Rahmaniar</p>
         </div>
       </footer>
 

@@ -170,7 +170,7 @@ export default function UserManagement({
             Manajemen Pengguna &amp; Hak Akses
           </h1>
           <p className="text-sm text-slate-500">
-            Daftarkan username dan password pegawai ke Database Server OneInAPP agar dapat login sebagai Pegawai atau Administrator.
+            Daftarkan username dan password pegawai ke Database Server SatuInApp agar dapat login sebagai Pegawai atau Administrator.
           </p>
         </div>
 
@@ -391,7 +391,7 @@ export default function UserManagement({
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Contoh: Masna Fitria"
+                  placeholder="Contoh: Masna Novita Rahmaniar"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
                 />
               </div>
